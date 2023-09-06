@@ -48,6 +48,31 @@ pipeline {
             }
         }
 
+        stage('Build app image'){
+            steps {
+                script {
+                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"
+                }
+            }
+        }
+
+        stage('Upload Image'){
+            steps{
+                script {
+                    docker.withRegistry('', registryCredential) {
+                       dockerImage.push("V$BUILD_NUMBER")
+                       dockerImage.push('latest') 
+                    }
+                }
+            }
+        }
+
+        stage('Remove Unused docker Image'){
+            steps{
+                sh "docker rmi $registry:V$BUILD_NUMBER"
+            }
+        }
+
         stage('CODE ANALYSIS with SONARQUBE') {
 
             environment {
@@ -73,30 +98,7 @@ pipeline {
         }
 
         
-        stage('Build app image'){
-            steps {
-                script {
-                    dockerImage = docker.build registry + ":V$BUILD_NUMBER"
-                }
-            }
-        }
-
-        stage('Upload Image'){
-            steps{
-                script {
-                    docker.withRegistry('', registryCredential) {
-                       dockerImage.push("V$BUILD_NUMBER")
-                       dockerImage.push('latest') 
-                    }
-                }
-            }
-        }
-
-        stage('Remove Unused docker Image'){
-            steps{
-                sh "docker rmi $registry:V$BUILD_NUMBER"
-            }
-        }
+        
 
         stage('Kubernetes Deploy') {
             agent { label 'KOPS' }
